@@ -1,0 +1,48 @@
+{
+  "name": "@ensuro/utils",
+  "description": "Javascript library with different utils for tests and dealing with smart contracts",
+  "version": "%%VERSION%%",
+  "files": [
+    "**/*.sol",
+    "/build",
+    "/js/*.js"
+  ],
+  "scripts": {
+    "prettier": "prettier --write 'contracts/**/*.sol' --write 'test/**/*.js'",
+    "solhint": "solhint 'contracts/**/*.sol'",
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat-dependency-compiler": "^1.2.1",
+    "chai": "^4.3.6",
+    "dotenv": "^16.4.5",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "hardhat": "^2.22.16",
+    "hardhat-contract-sizer": "^2.10.0",
+    "prettier": "^3.2.5",
+    "solhint": "^4.1.1",
+    "solhint-plugin-prettier": "^0.1.0",
+    "solidity-ast": "^0.4.59"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ensuro/utils.git"
+  },
+  "keywords": [
+    "ensuro",
+    "library",
+    "testing",
+    "utils"
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ensuro/utils/issues"
+  },
+  "homepage": "https://github.com/ensuro/utils#readme"
+}

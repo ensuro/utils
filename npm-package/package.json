@@ -1,0 +1,25 @@
+{
+  "name": "@ensuro/utils",
+  "description": "Javascript library with different utils for tests and dealing with smart contracts",
+  "version": "%%VERSION%%",
+  "files": [
+    "**/*.sol",
+    "/build",
+    "/js/*.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ensuro/utils.git"
+  },
+  "keywords": [
+    "ensuro",
+    "library",
+    "testing",
+    "utils"
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ensuro/utils/issues"
+  },
+  "homepage": "https://github.com/ensuro/utils#readme"
+}
