@@ -21,6 +21,12 @@ module.exports = {
     disambiguatePaths: false,
   },
   dependencyCompiler: {
-    paths: ["@openzeppelin/contracts/governance/TimelockController.sol"],
+    paths: [
+      "@openzeppelin/contracts/governance/TimelockController.sol",
+      "@openzeppelin/contracts/access/manager/AccessManager.sol",
+      "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+      "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      "@openzeppelin/contracts/token/ERC721/ERC721.sol",
+    ],
   },
 };

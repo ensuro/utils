@@ -29,6 +29,10 @@ git archive --format tar HEAD README.md contracts/ js/ | tar xv -C $TARGET_DIR
 
 mkdir $TARGET_DIR/build
 cp -r artifacts/contracts $TARGET_DIR/build
+
+# Include also @openzeppelin build, so it can be used as verifiable binary
+cp -r artifacts/@openzeppelin $TARGET_DIR/build
+
 cp artifacts/build-info/*.json $TARGET_DIR/build/build-info.json
 
 find $TARGET_DIR -name "*.dbg.json" -delete
