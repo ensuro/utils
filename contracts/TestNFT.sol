@@ -6,6 +6,8 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract TestNFT is ERC721 {
   address private _owner;
 
+  error OnlyOwnerCanBurn(address owner);
+
   constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) {
     _owner = msg.sender;
   }
@@ -16,7 +18,7 @@ contract TestNFT is ERC721 {
   }
 
   function burn(uint256 tokenId) public {
-    require(ERC721.ownerOf(tokenId) == msg.sender, "ERC721: burn of token that is not own");
+    require(ERC721.ownerOf(tokenId) == msg.sender, OnlyOwnerCanBurn(ERC721.ownerOf(tokenId)));
     return _burn(tokenId);
   }
 }

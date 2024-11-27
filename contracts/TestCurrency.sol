@@ -16,7 +16,7 @@ contract TestCurrency is ERC20, AccessControl {
     uint256 initialSupply,
     uint8 decimals_,
     address admin
-  ) ERC20(name_, symbol_)  {
+  ) ERC20(name_, symbol_) {
     _decimals = decimals_;
     _mint(msg.sender, initialSupply);
     _grantRole(DEFAULT_ADMIN_ROLE, admin);
