@@ -4,7 +4,6 @@ require("@nomicfoundation/hardhat-toolbox");
 require("hardhat-contract-sizer");
 require("hardhat-dependency-compiler");
 
-
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
