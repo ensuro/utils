@@ -4,9 +4,6 @@ require("@nomicfoundation/hardhat-toolbox");
 require("hardhat-contract-sizer");
 require("hardhat-dependency-compiler");
 
-const { installWrapper } = require("./js/hardhat-retry");
-
-installWrapper();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -21,7 +18,6 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      gas: 12000000,
       initialBaseFeePerGas: 0,
     },
   },
@@ -38,8 +34,5 @@ module.exports = {
       "@openzeppelin/contracts/token/ERC20/ERC20.sol",
       "@openzeppelin/contracts/token/ERC721/ERC721.sol",
     ],
-  },
-  mocha: {
-    timeout: 100000,
   },
 };
