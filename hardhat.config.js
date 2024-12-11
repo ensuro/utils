@@ -16,11 +16,6 @@ module.exports = {
       },
     },
   },
-  networks: {
-    hardhat: {
-      initialBaseFeePerGas: 0,
-    },
-  },
   contractSizer: {
     alphaSort: true,
     runOnCompile: false,
