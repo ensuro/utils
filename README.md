@@ -2,8 +2,7 @@
 
 In this library we include several utility functions used for tests and other tasks like deployments.
 
-
-# Hardhat
+## Hardhat-Retry
 
 We include hardhat-retry to enhance the stability of tests in the projects using Hardhat. It automatically retries due to network issues like:
 
@@ -16,7 +15,7 @@ We include hardhat-retry to enhance the stability of tests in the projects using
 To use hardhat-retry add the following to your Hardhat configuration file:
 
 ```js
-const hretry = require("@ensuro/utils/js/hardhat-retry")
+const hretry = require("@ensuro/utils/js/hardhat-retry");
 
 hretry.installWrapper();
 ```
@@ -29,4 +28,17 @@ networks: {
       initialBaseFeePerGas: 0,
     },
   },
+```
+
+## Verifiable binaries
+
+The verifiableBinaries module enables the use of compiled contracts, fetched from NPM packages.
+
+### hardhat.config.js
+
+```js
+const verifiableBinaries = require("@ensuro/utils/js/verifiableBinaries");
+
+verifiableBinaries.wrapEthersFunctions();
+verifiableBinaries.addTasks();
 ```
