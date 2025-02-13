@@ -38,4 +38,32 @@ describe("Utils library tests", function () {
     await expect(currency.connect(admin).mint(anon, _A(100))).not.to.be.reverted;
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
   });
+
+  it("Checks TestERC4626", async () => {
+    const { currency } = await helpers.loadFixture(deployFixture);
+
+    expect(await currency.balanceOf(anon)).to.equal(_A(10000));
+
+    const TestERC4626 = await ethers.getContractFactory("TestERC4626");
+    const vault = await TestERC4626.deploy("Test", "TEST", currency);
+
+    await currency.connect(anon).approve(vault, _A(1000));
+    await vault.connect(anon).deposit(_A(1000), anon);
+
+    expect(await vault.totalAssets()).to.equal(_A(1000));
+
+    await grantRole(hre, currency.connect(admin), "MINTER_ROLE", vault);
+
+    await vault.discreteEarning(_A(500));
+    expect(await vault.totalAssets()).to.equal(_A(1500));
+    expect(await vault.totalSupply()).to.equal(_A(1000));
+
+    await grantRole(hre, currency.connect(admin), "BURNER_ROLE", vault);
+    await vault.discreteEarning(_A(-200));
+
+    expect(await vault.totalAssets()).to.equal(_A(1300));
+
+    await vault.connect(anon).redeem(_A(1000), anon, anon);
+    expect(await currency.balanceOf(anon)).to.closeTo(_A(10300), _A("0.0001"));
+  });
 });
