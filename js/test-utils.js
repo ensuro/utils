@@ -97,10 +97,30 @@ Assertion.addMethod("revertedWithACError", function (contract, user, role) {
     .withArgs(user, getRole(role));
 });
 
+// Install chai matchear for AccessManagedError
+Assertion.addMethod("revertedWithAMError", function (contract, user) {
+  return new Assertion(this._obj).to.be.revertedWithCustomError(contract, "AccessManagedUnauthorized").withArgs(user);
+});
+
+/**
+ * Function to deploy a proxy and implementation, similar to hre.upgrades.deployProxy, but without using OZ upgrades
+ * library that does a lot of validations that don't work with binary contracts.
+ */
+async function deployProxy(proxyFactory, implFactory, constructorArgs, initializeArgs, extraProxyArgs) {
+  const impl = await implFactory.deploy(...(constructorArgs || []));
+  const initializeData = impl.interface.encodeFunctionData("initialize", initializeArgs || []);
+  const proxy = await proxyFactory.deploy(impl, initializeData, ...(extraProxyArgs || []));
+  const deploymentTransaction = proxy.deploymentTransaction();
+  const ret = implFactory.attach(await ethers.resolveAddress(proxy));
+  ret.deploymentTransaction = () => deploymentTransaction;
+  return ret;
+}
+
 module.exports = {
   fork,
   initCurrency,
   initForkCurrency,
   setupChain,
   skipForkTests,
+  deployProxy,
 };

@@ -198,6 +198,52 @@ function uintKeccak(value) {
   return BigInt(ethers.keccak256(ethers.toUtf8Bytes(value)));
 }
 
+const tagRegExp = new RegExp("\\[(?<neg>[!])?(?<variant>[a-zA-Z0-9]+)\\]", "gu");
+
+function tagit(testDescription, test, only = false) {
+  let any = false;
+  const iit = only || this.only ? it.only : it;
+  for (const m of testDescription.matchAll(tagRegExp)) {
+    if (m === undefined) break;
+    const neg = m.groups.neg !== undefined;
+    any = any || !neg;
+    if (m.groups.variant === this.name) {
+      if (!neg) {
+        // If tag found and not negated, run the it
+        iit(testDescription, test);
+        return;
+      }
+      // If tag found and negated, don't run the it
+      return;
+    }
+  }
+  // If no positive tags, run the it
+  if (!any) iit(testDescription, test);
+}
+
+async function makeAllViewsPublic(acMgr, contract) {
+  const PUBLIC_ROLE = await acMgr.PUBLIC_ROLE();
+  for (const fragment of contract.interface.fragments) {
+    if (fragment.type !== "function") continue;
+    if (fragment.stateMutability !== "pure" && fragment.stateMutability !== "view") continue;
+    await acMgr.setTargetFunctionRole(contract, [fragment.selector], PUBLIC_ROLE);
+  }
+}
+
+function mergeFragments(a, b) {
+  const fallback = a.find((f) => f.type === "fallback");
+  return a.concat(
+    b.filter((fragment) => fragment.type !== "constructor" && (fallback === undefined || fragment.type !== "fallback"))
+  );
+}
+
+async function setupAMRole(acMgr, vault, roles, role, methods) {
+  await acMgr.labelRole(roles[role], role);
+  for (const method of methods) {
+    await acMgr.setTargetFunctionRole(vault, [vault.interface.getFunction(method).selector], roles[role]);
+  }
+}
+
 module.exports = {
   _E,
   _A,
@@ -217,4 +263,8 @@ module.exports = {
   readImplementationAddress,
   uintKeccak,
   WAD,
+  tagit,
+  makeAllViewsPublic,
+  mergeFragments,
+  setupAMRole,
 };
