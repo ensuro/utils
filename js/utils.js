@@ -2,6 +2,7 @@
 
 const { findAll } = require("solidity-ast/utils");
 const ethers = require("ethers");
+const withArgsInternal = require("@nomicfoundation/hardhat-chai-matchers/internal/withArgs");
 const { IMPLEMENTATION_SLOT } = require("./constants");
 
 const _E = ethers.parseEther;
@@ -221,13 +222,59 @@ function tagit(testDescription, test, only = false) {
   if (!any) iit(testDescription, test);
 }
 
+/**
+ * Makes all the view or pure functions publicly accessible in an access managed contract
+ *
+ * @param {acMgr} The access manager contract
+ * @param {contract} The called contract
+ */
 async function makeAllViewsPublic(acMgr, contract) {
   const PUBLIC_ROLE = await acMgr.PUBLIC_ROLE();
-  for (const fragment of contract.interface.fragments) {
-    if (fragment.type !== "function") continue;
-    if (fragment.stateMutability !== "pure" && fragment.stateMutability !== "view") continue;
-    await acMgr.setTargetFunctionRole(contract, [fragment.selector], PUBLIC_ROLE);
-  }
+  const selectors = contract.interface.fragments
+    .filter(
+      (fragment) =>
+        fragment.type === "function" && (fragment.stateMutability === "pure" || fragment.stateMutability === "view")
+    )
+    .map((fragment) => fragment.selector);
+  await acMgr.setTargetFunctionRole(contract, selectors, PUBLIC_ROLE);
+}
+
+/**
+ * Setups a given role in an access managed contract
+ *
+ * @param {acMgr} The access manager contract
+ * @param {contract} The called contract
+ * @param {roles} Dictionary with all the roles
+ * @param {role} Name of the role (key in the `roles` dictionary and label)
+ * @param {methods} list of methods to enable for this role
+ */
+async function setupAMRole(acMgr, contract, roles, role, methods) {
+  await acMgr.labelRole(roles[role], role);
+  const selectors = methods.map((method) =>
+    method.startsWith("0x") ? method : contract.interface.getFunction(method).selector
+  );
+  await acMgr.setTargetFunctionRole(contract, selectors, roles[role]);
+}
+
+/**
+ * Setups a role that has permission to access all the non-view methods
+ *
+ * @param {acMgr} The access manager contract
+ * @param {contract} The called contract
+ * @param {roleId} Id to be used for the role, default=1111
+ * @param {roleName} Name of the role, default=SUPERADMIN
+ * @return The id of the created role (roleId)
+ */
+async function setupAMSuperAdminRole(acMgr, contract, roleId = 1111, roleName = "SUPERADMIN") {
+  await acMgr.labelRole(roleId, roleName);
+  const selectors = contract.interface.fragments
+    .filter(
+      (fragment) =>
+        fragment.type === "function" && fragment.stateMutability !== "pure" && fragment.stateMutability !== "view"
+    )
+    .map((fragment) => fragment.selector);
+  await acMgr.setTargetFunctionRole(contract, selectors, roleId);
+  return roleId;
 }
 
 function mergeFragments(a, b) {
@@ -237,12 +284,29 @@ function mergeFragments(a, b) {
   );
 }
 
-async function setupAMRole(acMgr, vault, roles, role, methods) {
-  await acMgr.labelRole(roles[role], role);
-  for (const method of methods) {
-    await acMgr.setTargetFunctionRole(vault, [vault.interface.getFunction(method).selector], roles[role]);
-  }
-}
+// Alternative to anyValue and anyUint that captures the received value
+// Usefull when you have to do closeTo comparisons
+const captureAny = { lastUint: undefined, lastValue: undefined };
+
+Reflect.defineProperty(captureAny, "uint", {
+  enumeable: true,
+  get: function () {
+    return (i) => {
+      this.lastUint = i;
+      return withArgsInternal.anyUint(i);
+    };
+  },
+});
+
+Reflect.defineProperty(captureAny, "value", {
+  enumeable: true,
+  get: function () {
+    return (i) => {
+      this.lastValue = i;
+      return withArgsInternal.anyValue(i);
+    };
+  },
+});
 
 module.exports = {
   _E,
@@ -267,4 +331,6 @@ module.exports = {
   makeAllViewsPublic,
   mergeFragments,
   setupAMRole,
+  setupAMSuperAdminRole,
+  captureAny,
 };
