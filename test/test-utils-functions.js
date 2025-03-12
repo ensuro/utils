@@ -5,6 +5,7 @@ const { _A, getRole, grantRole } = require("../js/utils");
 const { initCurrency } = require("../js/test-utils");
 
 const { ethers } = hre;
+const { MaxUint256 } = ethers;
 
 describe("Utils library tests", function () {
   let admin, anon, user1, user2;
@@ -65,5 +66,49 @@ describe("Utils library tests", function () {
 
     await vault.connect(anon).redeem(_A(1000), anon, anon);
     expect(await currency.balanceOf(anon)).to.closeTo(_A(10300), _A("0.0001"));
+  });
+
+  it("Should be able to override TestERC4626 maxXXX methods", async () => {
+    const { currency } = await helpers.loadFixture(deployFixture);
+
+    const TestERC4626 = await ethers.getContractFactory("TestERC4626");
+    const vault = await TestERC4626.deploy("Test", "TEST", currency);
+
+    const methods = [
+      {
+        name: "Deposit",
+        option: 0,
+        initial: MaxUint256,
+        tests: [_A(2), MaxUint256],
+      },
+      {
+        name: "Mint",
+        option: 1,
+        initial: MaxUint256,
+        tests: [_A(3), MaxUint256],
+      },
+      {
+        name: "Withdraw",
+        option: 2,
+        initial: 0,
+        tests: [_A(4), MaxUint256, 0],
+      },
+      {
+        name: "Redeem",
+        option: 3,
+        initial: 0,
+        tests: [_A(4), MaxUint256, 0],
+      },
+    ];
+
+    for (const method of methods) {
+      expect(await vault[`max${method.name}`](anon)).to.equal(method.initial);
+      for (const testValue of method.tests) {
+        await vault.setOverride(method.option, testValue);
+        expect(await vault[`max${method.name}`](anon)).to.equal(testValue);
+      }
+      await vault.setOverride(method.option, await vault.OVERRIDE_UNSET());
+      expect(await vault[`max${method.name}`](anon)).to.equal(method.initial);
+    }
   });
 });

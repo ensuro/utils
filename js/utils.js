@@ -286,27 +286,31 @@ function mergeFragments(a, b) {
 
 // Alternative to anyValue and anyUint that captures the received value
 // Usefull when you have to do closeTo comparisons
-const captureAny = { lastUint: undefined, lastValue: undefined };
+function newCaptureAny() {
+  const ret = { lastUint: undefined, lastValue: undefined };
+  Reflect.defineProperty(ret, "uint", {
+    enumeable: true,
+    get: function () {
+      return (i) => {
+        this.lastUint = i;
+        return withArgsInternal.anyUint(i);
+      };
+    },
+  });
 
-Reflect.defineProperty(captureAny, "uint", {
-  enumeable: true,
-  get: function () {
-    return (i) => {
-      this.lastUint = i;
-      return withArgsInternal.anyUint(i);
-    };
-  },
-});
+  Reflect.defineProperty(ret, "value", {
+    enumeable: true,
+    get: function () {
+      return (i) => {
+        this.lastValue = i;
+        return withArgsInternal.anyValue(i);
+      };
+    },
+  });
+  return ret;
+}
 
-Reflect.defineProperty(captureAny, "value", {
-  enumeable: true,
-  get: function () {
-    return (i) => {
-      this.lastValue = i;
-      return withArgsInternal.anyValue(i);
-    };
-  },
-});
+const captureAny = newCaptureAny();
 
 module.exports = {
   _E,
@@ -333,4 +337,5 @@ module.exports = {
   setupAMRole,
   setupAMSuperAdminRole,
   captureAny,
+  newCaptureAny,
 };

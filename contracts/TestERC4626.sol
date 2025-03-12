@@ -9,6 +9,20 @@ import {TestCurrency} from "./TestCurrency.sol";
 contract TestERC4626 is ERC4626 {
   bool internal _broken;
 
+  uint256 public overrideMaxDeposit;
+  uint256 public overrideMaxMint;
+  uint256 public overrideMaxWithdraw;
+  uint256 public overrideMaxRedeem;
+
+  uint256 public constant OVERRIDE_UNSET = type(uint256).max - 99;
+
+  enum OverrideOption {
+    deposit,
+    mint,
+    withdraw,
+    redeem
+  }
+
   error VaultIsBroken(bytes4 selector);
 
   modifier isBroken() {
@@ -16,11 +30,9 @@ contract TestERC4626 is ERC4626 {
     _;
   }
 
-  constructor(
-    string memory name_,
-    string memory symbol_,
-    IERC20Metadata asset_
-  ) ERC20(name_, symbol_) ERC4626(asset_) {}
+  constructor(string memory name_, string memory symbol_, IERC20Metadata asset_) ERC20(name_, symbol_) ERC4626(asset_) {
+    overrideMaxRedeem = overrideMaxWithdraw = overrideMaxMint = overrideMaxDeposit = OVERRIDE_UNSET;
+  }
 
   function _deposit(
     address caller,
@@ -58,5 +70,28 @@ contract TestERC4626 is ERC4626 {
 
   function broken() external view returns (bool) {
     return _broken;
+  }
+
+  function maxDeposit(address owner) public view override returns (uint256) {
+    return overrideMaxDeposit == OVERRIDE_UNSET ? super.maxDeposit(owner) : overrideMaxDeposit;
+  }
+
+  function maxMint(address owner) public view override returns (uint256) {
+    return overrideMaxMint == OVERRIDE_UNSET ? super.maxMint(owner) : overrideMaxMint;
+  }
+
+  function maxWithdraw(address owner) public view override returns (uint256) {
+    return overrideMaxWithdraw == OVERRIDE_UNSET ? super.maxWithdraw(owner) : overrideMaxWithdraw;
+  }
+
+  function maxRedeem(address owner) public view override returns (uint256) {
+    return overrideMaxRedeem == OVERRIDE_UNSET ? super.maxRedeem(owner) : overrideMaxRedeem;
+  }
+
+  function setOverride(OverrideOption option, uint256 newValue) external {
+    if (option == OverrideOption.deposit) overrideMaxDeposit = newValue;
+    if (option == OverrideOption.mint) overrideMaxMint = newValue;
+    if (option == OverrideOption.withdraw) overrideMaxWithdraw = newValue;
+    if (option == OverrideOption.redeem) overrideMaxRedeem = newValue;
   }
 }
