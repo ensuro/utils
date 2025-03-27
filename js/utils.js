@@ -201,14 +201,16 @@ function uintKeccak(value) {
 
 const tagRegExp = new RegExp("\\[(?<neg>[!])?(?<variant>[a-zA-Z0-9]+)\\]", "gu");
 
-function tagit(testDescription, test, only = false) {
+const tagConditionRegExp = new RegExp("\\[(?<neg>[!])?[?](?<boolAttr>[a-zA-Z0-9]+)\\]", "gu");
+
+function tagitVariant(variant, only, testDescription, test) {
   let any = false;
-  const iit = only || this.only ? it.only : it;
+  const iit = only || variant.only ? it.only : it;
   for (const m of testDescription.matchAll(tagRegExp)) {
     if (m === undefined) break;
     const neg = m.groups.neg !== undefined;
     any = any || !neg;
-    if (m.groups.variant === this.name) {
+    if (m.groups.variant === variant.name) {
       if (!neg) {
         // If tag found and not negated, run the it
         iit(testDescription, test);
@@ -218,9 +220,25 @@ function tagit(testDescription, test, only = false) {
       return;
     }
   }
+  for (const m of testDescription.matchAll(tagConditionRegExp)) {
+    if (m === undefined) break;
+    const neg = m.groups.neg !== undefined;
+    const variantBool = variant[m.groups.boolAttr] || false;
+    if ((variantBool && !neg) || (!variantBool && neg)) {
+      // If tag found and not negated, run the it
+      iit(testDescription, test);
+      return;
+    }
+    // Either variantBool is false or is true and neg = true, don't run the it
+    return;
+  }
   // If no positive tags, run the it
   if (!any) iit(testDescription, test);
 }
+
+const tagit = (testDescription, test, only = false) => tagitVariant(this, only, testDescription, test);
+
+const tagitonly = (testDescription, test) => tagitVariant(this, true, testDescription, test);
 
 /**
  * Makes all the view or pure functions publicly accessible in an access managed contract
@@ -332,6 +350,8 @@ module.exports = {
   uintKeccak,
   WAD,
   tagit,
+  tagitonly,
+  tagitVariant,
   makeAllViewsPublic,
   mergeFragments,
   setupAMRole,
