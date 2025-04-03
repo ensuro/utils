@@ -32,8 +32,8 @@ function loadPackageArtifacts(packageConfig, artifactsPath, artifacts) {
     ...(packageConfig.artifactsConfig || {}),
   };
 
-  let buildInfoPath = path.join(artifactsPath, "build-info.json");
-  if (!fs.existsSync(buildInfoPath)) {
+  let buildInfoPath = path.parse(packageConfig.buildInfoPath || path.join(artifactsPath, "build-info.json"));
+  if (!fs.existsSync(path.format(buildInfoPath))) {
     buildInfoPath = null;
   }
   const finder = new glob.GlobSync(path.join(artifactsPath, "**/*.json"));
@@ -41,7 +41,7 @@ function loadPackageArtifacts(packageConfig, artifactsPath, artifacts) {
     const parsedFile = path.parse(fileName);
     const contractName = parsedFile.name;
     // Skip build-info and debug files
-    if (contractName === "build-info" || contractName.endsWith(".dbg")) continue;
+    if (contractName === (buildInfoPath?.name || "build-info") || contractName.endsWith(".dbg")) continue;
     // If there's a whitelist, skip those that aren't in the whitelist
     if (artifactsConfig.whitelist.length !== 0 && !artifactsConfig.whitelist.includes(contractName)) continue;
     // If there's a blacklist, skip those that are in the blacklist
@@ -52,7 +52,7 @@ function loadPackageArtifacts(packageConfig, artifactsPath, artifacts) {
       package: packageConfig.package,
       version: packageConfig.version,
       fileName,
-      buildInfoPath,
+      buildInfoPath: buildInfoPath ? path.format(buildInfoPath) : null,
       onlyFQ: artifactsConfig.onlyFQ, // Indicates this contract should match only when specified with full
       // name, like "@openzeppelin/contracts/AccessManager"
     });
@@ -144,8 +144,10 @@ function verifiableContractFactory(contractFactory, binaryArtifact) {
     get(target, prop, receiver) {
       if (prop === "deploy") {
         return async (...args) => {
-          const contract = await target.deploy(...args);
-          contract.binaryArtifact = binaryArtifact;
+          const contract = target.deploy(...args);
+          contract.then((c) => {
+            c.binaryArtifact = binaryArtifact;
+          });
           return contract;
         };
       }
