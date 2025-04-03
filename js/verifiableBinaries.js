@@ -160,7 +160,6 @@ function wrapGetContractFactory(hre, defaultGetContractFactory) {
     if (typeof contractClass === "string") {
       const binaryArtifact = await findBinaryArtifact(hre, contractClass);
       if (binaryArtifact !== undefined) {
-        // return hre.ethers.getContractFactoryFromArtifact(artifact, ...args);
         const artifact = JSON.parse(fs.readFileSync(binaryArtifact.fileName));
         return verifiableContractFactory(
           await hre.ethers.getContractFactoryFromArtifact(artifact, ...args),
@@ -176,9 +175,12 @@ function wrapGetContractAt(hre, defaultGetContractAt) {
   return async function (contractClass, ...args) {
     if (typeof contractClass === "string") {
       const binaryArtifact = await findBinaryArtifact(hre, contractClass);
+
       if (binaryArtifact !== undefined) {
         const artifact = JSON.parse(fs.readFileSync(binaryArtifact.fileName));
-        return hre.ethers.getContractAtFromArtifact(artifact, ...args);
+        const contract = await hre.ethers.getContractAtFromArtifact(artifact, ...args);
+        contract.binaryArtifact = binaryArtifact;
+        return contract;
       }
     }
     return defaultGetContractAt(contractClass, ...args);
@@ -209,19 +211,30 @@ function absolutePath(importedFile, sourceFileName) {
   return sourcePath.join("/");
 }
 
-function addRequiredSources(requiredSources, sources, sourcePath) {
+function addRequiredSources(requiredSources, sources, startSourcePath) {
   const importRe = new RegExp("^import .*[\"'](?<importedFile>.+)[\"'];$", "gmu");
-  if (sources[sourcePath] === undefined) {
-    throw new Error(`Source ${sourcePath} not found. Keys: ${Object.keys(sources)}`);
-  }
-  const sourceCode = sources[sourcePath].content;
-  sourceCode.replace(importRe, (_, importedFile) => {
-    importedFile = absolutePath(importedFile, sourcePath);
-    if (!requiredSources.includes(importedFile)) {
-      requiredSources.push(importedFile);
+  const queue = [startSourcePath];
+  const visited = new Set();
+
+  while (queue.length > 0) {
+    const sourcePath = queue.shift();
+
+    if (visited.has(sourcePath)) continue;
+    visited.add(sourcePath);
+
+    if (sources[sourcePath] === undefined) {
+      throw new Error(`Source ${sourcePath} not found. Keys: ${Object.keys(sources)}`);
     }
-    addRequiredSources(requiredSources, sources, importedFile);
-  });
+
+    const sourceCode = sources[sourcePath].content;
+    sourceCode.replace(importRe, (_, importedFile) => {
+      importedFile = absolutePath(importedFile, sourcePath);
+      if (!requiredSources.includes(importedFile)) {
+        requiredSources.push(importedFile);
+        queue.push(importedFile);
+      }
+    });
+  }
 }
 
 function buildInfoForSource(fullBuildInfo, sourceName) {
@@ -347,6 +360,31 @@ function addTasks() {
         // tar zxvf /tmp/openzeppelin-contracts-5.1.0.tgz --strip 1 -C verifiable-binaries/@openzeppelin/contracts/5.1.0
         if (packageConfig.type !== "npm" || packageConfig.packagePath !== undefined) continue;
         execSync(`scripts/fetch-binary-package.sh ${basePath} ${packageConfig.package} ${packageConfig.version} npm`);
+      }
+    });
+  task("vb:verify", "Verifies a binary contract on Etherscan")
+    .addParam("contractType", "The contract type to verify")
+    .addParam("address", "The contract address to verify")
+    .addOptionalVariadicPositionalParam("constructorArguments", "The constructor arguments", [])
+    .setAction(async function ({ contractType, constructorArguments, address }, hre) {
+      const contract = await hre.ethers.getContractAt(contractType, address);
+
+      await verifyBinaryContract(hre, contract, false, constructorArguments);
+    });
+  task("vb:findArtifact", "Finds the artifact for a contract")
+    .addPositionalParam("contract", "The contract type to find")
+    .setAction(async function ({ contract }, hre) {
+      const artifact = await findBinaryArtifact(hre, contract);
+      if (artifact === undefined) {
+        console.log(`Binary artifact not found for ${contract}`);
+        const legacyArtifact = await hre.artifacts.readArtifact(contract);
+        if (legacyArtifact !== undefined)
+          console.log("Legacy artifact found:", {
+            contractName: legacyArtifact.contractName,
+            sourceName: legacyArtifact.sourceName,
+          });
+      } else {
+        console.log(artifact);
       }
     });
 }
