@@ -1,7 +1,7 @@
 {
   "name": "@ensuro/utils",
   "description": "Javascript library with different utils for tests and dealing with smart contracts",
-  "version": "v0.2.6",
+  "version": "%%VERSION%%",
   "files": [
     "**/*.sol",
     "/build",
