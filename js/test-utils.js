@@ -1,6 +1,8 @@
+const { expect } = require("chai");
 const hre = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { getRole } = require("./utils");
+const withArgs = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+const { getRole, captureAny, getTransactionEvent, getAddress } = require("./utils");
 const { Assertion } = require("chai");
 
 const { ethers } = hre;
@@ -116,6 +118,34 @@ async function deployProxy(proxyFactory, implFactory, constructorArgs, initializ
   return ret;
 }
 
+async function amScheduleAndExecute(accessManager, target, callData) {
+  await expect(accessManager.schedule(target, callData, 0))
+    .to.emit(accessManager, "OperationScheduled")
+    .withArgs(withArgs.anyValue, withArgs.anyValue, captureAny.uint, withArgs.anyValue, target, withArgs.anyValue);
+  const when = captureAny.lastUint;
+  await helpers.time.increaseTo(when);
+  return accessManager.execute(target, callData);
+}
+
+async function amScheduleAndExecuteBatch(accessManager, targets, callDatas) {
+  const scheduleCalls = targets.map((target, index) =>
+    accessManager.interface.encodeFunctionData("schedule", [getAddress(target), callDatas[index], 0])
+  );
+  const executeCalls = targets.map((target, index) =>
+    accessManager.interface.encodeFunctionData("execute", [getAddress(target), callDatas[index]])
+  );
+  const tx = await accessManager.multicall(scheduleCalls);
+  const receipt = await tx.wait();
+  const maxWhen = Math.max(
+    getTransactionEvent(accessManager.interface, receipt, "OperationScheduled", false, getAddress(accessManager)).map(
+      (evt) => evt.args.schedule
+    )
+  );
+
+  await helpers.time.increaseTo(maxWhen);
+  return accessManager.multicall(executeCalls);
+}
+
 module.exports = {
   fork,
   initCurrency,
@@ -123,4 +153,6 @@ module.exports = {
   setupChain,
   skipForkTests,
   deployProxy,
+  amScheduleAndExecute,
+  amScheduleAndExecuteBatch,
 };

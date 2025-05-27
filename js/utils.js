@@ -1,5 +1,4 @@
 // In this module we include the utility functions that don't require hre global variable
-
 const { findAll } = require("solidity-ast/utils");
 const ethers = require("ethers");
 const withArgsInternal = require("@nomicfoundation/hardhat-chai-matchers/internal/withArgs");
@@ -186,8 +185,8 @@ function accessControlMessage(user, component, role) {
 }
 
 async function readImplementationAddress(hre, contractAddress) {
-  const implStorage = await hre.ethers.provider.getStorageAt(contractAddress, IMPLEMENTATION_SLOT);
-  return ethers.utils.getAddress(ethers.utils.hexDataSlice(implStorage, 12));
+  const implStorage = await hre.ethers.provider.getStorage(contractAddress, IMPLEMENTATION_SLOT);
+  return ethers.getAddress(ethers.dataSlice(implStorage, 12));
 }
 
 /**
