@@ -198,7 +198,7 @@ function uintKeccak(value) {
   return BigInt(ethers.keccak256(ethers.toUtf8Bytes(value)));
 }
 
-const tagRegExp = new RegExp("\\[(?<neg>[!])?(?<variant>[a-zA-Z0-9]+)\\]", "gu");
+const tagRegExp = new RegExp("\\[(?<neg>[!])?(?<variant>[a-zA-Z0-9+]+)\\]", "gu");
 
 const tagConditionRegExp = new RegExp("\\[(?<neg>[!])?[?](?<boolAttr>[a-zA-Z0-9]+)\\]", "gu");
 
