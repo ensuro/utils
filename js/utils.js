@@ -119,6 +119,23 @@ async function grantComponentRole(hre, contract, component, role, user, txOverri
   }
 }
 
+const AM_ROLES = {
+  ADMIN_ROLE: 0n,
+  PUBLIC_ROLE: BigInt("0xffffffffffffffff"),
+};
+
+/**
+ * Returns an access manager role (64 bit) from a string, computing a hash and taking the last 16 bits
+ */
+function getAccessManagerRole(roleName) {
+  let roleId = AM_ROLES[roleName];
+  if (roleId !== undefined) return roleId;
+  if (typeof roleName === "number" || typeof roleName === "bigint") return roleName;
+  // Backward compatibility for some cases where we still have the role as string with digits
+  if (/^\d+$/u.test(roleName)) return BigInt(roleName);
+  return BigInt(`0x${ethers.keccak256(ethers.toUtf8Bytes(roleName)).slice(-16)}`);
+}
+
 async function getDefaultSigner(hre) {
   const signers = await hre.ethers.getSigners();
   return signers[0];
@@ -340,6 +357,7 @@ module.exports = {
   getDefaultSigner,
   getRole,
   getComponentRole,
+  getAccessManagerRole,
   getStorageLayout,
   getTransactionEvent,
   grantRole,

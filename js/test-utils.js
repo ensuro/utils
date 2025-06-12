@@ -136,11 +136,15 @@ async function amScheduleAndExecuteBatch(accessManager, targets, callDatas) {
   );
   const tx = await accessManager.multicall(scheduleCalls);
   const receipt = await tx.wait();
-  const maxWhen = Math.max(
-    getTransactionEvent(accessManager.interface, receipt, "OperationScheduled", false, getAddress(accessManager)).map(
-      (evt) => evt.args.schedule
-    )
-  );
+  const maxWhen = getTransactionEvent(
+    accessManager.interface,
+    receipt,
+    "OperationScheduled",
+    false,
+    getAddress(accessManager)
+  )
+    .map((evt) => evt.args.schedule)
+    .reduce((accum, value) => (value > accum ? value : accum), BigInt(0));
 
   await helpers.time.increaseTo(maxWhen);
   return accessManager.multicall(executeCalls);
