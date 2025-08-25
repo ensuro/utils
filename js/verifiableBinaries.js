@@ -368,10 +368,13 @@ function addTasks() {
     .addParam("contractType", "The contract type to verify")
     .addParam("address", "The contract address to verify")
     .addOptionalVariadicPositionalParam("constructorArguments", "The constructor arguments", [])
-    .setAction(async function ({ contractType, constructorArguments, address }, hre) {
+    .addOptionalParam("libraries", "Libraries", "", types.str)
+    .setAction(async function ({ contractType, constructorArguments, address, libraries }, hre) {
+      const librariesDict =
+        libraries !== "" ? Object.fromEntries(libraries.split(",").map((keyAddress) => keyAddress.split(":"))) : {};
       const contract = await hre.ethers.getContractAt(contractType, address);
 
-      await verifyBinaryContract(hre, contract, false, constructorArguments);
+      await verifyBinaryContract(hre, contract, false, constructorArguments, librariesDict);
     });
   task("vb:findArtifact", "Finds the artifact for a contract")
     .addPositionalParam("contract", "The contract type to find")

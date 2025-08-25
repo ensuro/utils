@@ -283,11 +283,12 @@ async function makeAllViewsPublic(acMgr, contract) {
  * @param {methods} list of methods to enable for this role
  */
 async function setupAMRole(acMgr, contract, roles, role, methods) {
-  await acMgr.labelRole(roles[role], role);
+  const roleId = roles === undefined ? getAccessManagerRole(role) : roles[role];
+  await acMgr.labelRole(roleId, role);
   const selectors = methods.map((method) =>
     method.startsWith("0x") ? method : contract.interface.getFunction(method).selector
   );
-  await acMgr.setTargetFunctionRole(contract, selectors, roles[role]);
+  await acMgr.setTargetFunctionRole(contract, selectors, roleId);
 }
 
 /**
@@ -300,7 +301,11 @@ async function setupAMRole(acMgr, contract, roles, role, methods) {
  * @return The id of the created role (roleId)
  */
 async function setupAMSuperAdminRole(acMgr, contract, roleId = 1111, roleName = "SUPERADMIN") {
-  await acMgr.labelRole(roleId, roleName);
+  roleId = roleId === undefined ? getAccessManagerRole(roleName) : roleId;
+  if (AM_ROLES[roleName] === undefined) {
+    // Don't label PUBLIC_ROLE or ADMIN_ROLE
+    await acMgr.labelRole(roleId, roleName);
+  }
   const selectors = contract.interface.fragments
     .filter(
       (fragment) =>
@@ -375,4 +380,5 @@ module.exports = {
   setupAMSuperAdminRole,
   captureAny,
   newCaptureAny,
+  AM_ROLES,
 };
