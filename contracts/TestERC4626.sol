@@ -4,7 +4,11 @@ pragma solidity ^0.8.0;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {TestCurrency} from "./TestCurrency.sol";
+
+interface IMintable {
+  function mint(address recipient, uint256 amount) external;
+  function burn(address recipient, uint256 amount) external;
+}
 
 contract TestERC4626 is ERC4626 {
   bool internal _broken;
@@ -58,9 +62,9 @@ contract TestERC4626 is ERC4626 {
    */
   function discreteEarning(int256 assets) external {
     if (assets > 0) {
-      TestCurrency(asset()).mint(address(this), uint256(assets));
+      IMintable(asset()).mint(address(this), uint256(assets));
     } else {
-      TestCurrency(asset()).burn(address(this), uint256(-assets));
+      IMintable(asset()).burn(address(this), uint256(-assets));
     }
   }
 

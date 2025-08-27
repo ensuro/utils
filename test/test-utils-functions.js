@@ -14,7 +14,8 @@ describe("Utils library tests", function () {
     [, anon, admin, user1, user2] = await ethers.getSigners();
   });
 
-  async function deployFixture() {
+  async function deployACFixture() {
+    // Fixture with TestCurrencyAC (with access control)
     const currency = await initCurrency(
       { name: "Test USDC", symbol: "USDC", decimals: 6, initial_supply: _A(50000), extraArgs: [admin] },
       [anon, user1, user2, admin],
@@ -24,8 +25,19 @@ describe("Utils library tests", function () {
     return { currency };
   }
 
-  it("Checks only MINTER_ROLE can mint", async () => {
-    const { currency } = await helpers.loadFixture(deployFixture);
+  async function deployFixture() {
+    // Fixture with TestCurrency (without access control)
+    const currency = await initCurrency(
+      { name: "Test USDC", symbol: "USDC", decimals: 6, initial_supply: _A(50000) },
+      [anon, user1, user2, admin],
+      [_A("10000"), _A("2000"), _A("1000"), _A("20000")]
+    );
+
+    return { currency };
+  }
+
+  it("Checks only MINTER_ROLE can mint (TestCurrencyAC)", async () => {
+    const { currency } = await helpers.loadFixture(deployACFixture);
 
     expect(await currency.balanceOf(anon)).to.equal(_A(10000));
 
@@ -40,8 +52,19 @@ describe("Utils library tests", function () {
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
   });
 
-  it("Checks TestERC4626", async () => {
+  it("Checks anyone can mint and burnd (TestCurrency)", async () => {
     const { currency } = await helpers.loadFixture(deployFixture);
+
+    expect(await currency.balanceOf(anon)).to.equal(_A(10000));
+
+    await expect(currency.connect(admin).mint(anon, _A(100))).not.to.be.reverted;
+    expect(await currency.balanceOf(anon)).to.equal(_A(10100));
+    await expect(currency.connect(admin).burn(anon, _A(150))).not.to.be.reverted;
+    expect(await currency.balanceOf(anon)).to.equal(_A(9950));
+  });
+
+  it("Checks TestERC4626", async () => {
+    const { currency } = await helpers.loadFixture(deployACFixture);
 
     expect(await currency.balanceOf(anon)).to.equal(_A(10000));
 

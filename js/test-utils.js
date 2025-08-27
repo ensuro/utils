@@ -8,7 +8,10 @@ const { Assertion } = require("chai");
 const { ethers } = hre;
 
 async function initCurrency(options, initial_targets, initial_balances) {
-  const Currency = await ethers.getContractFactory(options.contractClass || "TestCurrency");
+  const extraArgs = options.extraArgs || [];
+  const Currency = await ethers.getContractFactory(
+    options.contractClass || (extraArgs.length == 0 ? "TestCurrency" : "TestCurrencyAC")
+  );
   let currency = await Currency.deploy(
     options.name || "Test Currency",
     options.symbol || "TEST",
