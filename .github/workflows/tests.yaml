@@ -1,9 +1,9 @@
-name: SwapLibrary Tests
+name: ensuro/utils Tests
 on: [push]
 
 jobs:
   tests:
-    name: SwapLibrary Tests
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
