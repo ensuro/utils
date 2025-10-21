@@ -2,7 +2,8 @@
 const { findAll } = require("solidity-ast/utils");
 const ethers = require("ethers");
 const withArgsInternal = require("@nomicfoundation/hardhat-chai-matchers/internal/withArgs");
-const { IMPLEMENTATION_SLOT } = require("./constants");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
+const { IMPLEMENTATION_SLOT, HOUR } = require("./constants");
 
 const _E = ethers.parseEther;
 const WAD = 10n ** 18n; // 1e18
@@ -351,6 +352,69 @@ function newCaptureAny() {
 
 const captureAny = newCaptureAny();
 
+async function makeEIP2612Signature(hre, token, owner, spenderAddress, value, deadline = HOUR) {
+  // From: https://www.quicknode.com/guides/ethereum-development/transactions/how-to-use-erc20-permit-approval
+  const chainId = hre.network.config.chainId;
+  // set the domain parameters
+  const tokenAddr = await ethers.resolveAddress(token);
+  const domain = {
+    name: await token.name(),
+    version: "1",
+    chainId: chainId,
+    verifyingContract: tokenAddr,
+  };
+
+  // set the Permit type parameters
+  const types = {
+    Permit: [
+      {
+        name: "owner",
+        type: "address",
+      },
+      {
+        name: "spender",
+        type: "address",
+      },
+      {
+        name: "value",
+        type: "uint256",
+      },
+      {
+        name: "nonce",
+        type: "uint256",
+      },
+      {
+        name: "deadline",
+        type: "uint256",
+      },
+    ],
+  };
+
+  if (deadline < 1600000000) {
+    // Is a duration in seconds
+    deadline = (await helpers.time.latest()) + deadline;
+  }
+
+  const nonces = await token.nonces(owner);
+
+  // set the Permit type values
+  const ownerAddr = await ethers.resolveAddress(owner);
+  const values = {
+    owner: ownerAddr,
+    spender: spenderAddress,
+    value: value,
+    nonce: nonces,
+    deadline: deadline,
+  };
+
+  // sign the Permit type data with the deployer's private key
+  const signature = await owner.signTypedData(domain, types, values);
+
+  // split the signature into its components
+  const sig = ethers.Signature.from(signature);
+  return { sig, deadline, nonces };
+}
+
 module.exports = {
   _E,
   _A,
@@ -381,4 +445,5 @@ module.exports = {
   captureAny,
   newCaptureAny,
   AM_ROLES,
+  makeEIP2612Signature,
 };

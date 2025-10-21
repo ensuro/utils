@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const { expect } = require("chai");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { _A, getRole, grantRole } = require("../js/utils");
+const { _A, getRole, grantRole, makeEIP2612Signature } = require("../js/utils");
 const { initCurrency } = require("../js/test-utils");
 
 const { ethers } = hre;
@@ -36,6 +36,23 @@ describe("Utils library tests", function () {
     return { currency };
   }
 
+  async function deployFixturePermit() {
+    // Fixture with TestCurrency (without access control)
+    const currency = await initCurrency(
+      {
+        name: "Test USDC",
+        symbol: "USDC",
+        decimals: 6,
+        initial_supply: _A(50000),
+        contractClass: "TestCurrencyPermit",
+      },
+      [anon, user1, user2, admin],
+      [_A("10000"), _A("2000"), _A("1000"), _A("20000")]
+    );
+
+    return { currency };
+  }
+
   it("Checks only MINTER_ROLE can mint (TestCurrencyAC)", async () => {
     const { currency } = await helpers.loadFixture(deployACFixture);
 
@@ -61,6 +78,31 @@ describe("Utils library tests", function () {
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
     await expect(currency.connect(admin).burn(anon, _A(150))).not.to.be.reverted;
     expect(await currency.balanceOf(anon)).to.equal(_A(9950));
+  });
+
+  it("Checks gasless spending approvals (TestCurrencyPermit)", async () => {
+    const { currency } = await helpers.loadFixture(deployFixturePermit);
+
+    expect(await currency.balanceOf(user1)).to.equal(_A(2000));
+    expect(await currency.balanceOf(user2)).to.equal(_A(1000));
+
+    const { sig, deadline } = await makeEIP2612Signature(
+      hre,
+      currency,
+      user1,
+      await ethers.resolveAddress(user2),
+      _A(200)
+    );
+    await expect(currency.permit(user1, user2, _A(200), deadline, sig.v, sig.r, sig.s))
+      .to.emit(currency, "Approval")
+      .withArgs(user1, user2, _A(200));
+
+    await expect(currency.connect(user2).transferFrom(user1, user2, _A(60)))
+      .to.emit(currency, "Transfer")
+      .withArgs(user1, user2, _A(60));
+
+    expect(await currency.balanceOf(user1)).to.equal(_A(2000 - 60));
+    expect(await currency.balanceOf(user2)).to.equal(_A(1000 + 60));
   });
 
   it("Checks TestERC4626", async () => {
