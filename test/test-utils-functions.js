@@ -1,10 +1,10 @@
-const hre = require("hardhat");
-const { expect } = require("chai");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { _A, getRole, grantRole, makeEIP2612Signature } = require("../js/utils");
-const { initCurrency } = require("../js/test-utils");
+import hre from "hardhat";
+import { expect } from "chai";
+import { _A, getRole, grantRole, makeEIP2612Signature } from "../js/utils.js";
+import { initCurrency } from "../js/test-utils.js";
 
-const { ethers } = hre;
+const connection = await hre.network.connect();
+const { networkHelpers: helpers, ethers } = connection;
 const { MaxUint256 } = ethers;
 
 describe("Utils library tests", function () {
@@ -17,6 +17,7 @@ describe("Utils library tests", function () {
   async function deployACFixture() {
     // Fixture with TestCurrencyAC (with access control)
     const currency = await initCurrency(
+      ethers,
       { name: "Test USDC", symbol: "USDC", decimals: 6, initial_supply: _A(50000), extraArgs: [admin] },
       [anon, user1, user2, admin],
       [_A("10000"), _A("2000"), _A("1000"), _A("20000")]
@@ -28,6 +29,7 @@ describe("Utils library tests", function () {
   async function deployFixture() {
     // Fixture with TestCurrency (without access control)
     const currency = await initCurrency(
+      ethers,
       { name: "Test USDC", symbol: "USDC", decimals: 6, initial_supply: _A(50000) },
       [anon, user1, user2, admin],
       [_A("10000"), _A("2000"), _A("1000"), _A("20000")]
@@ -39,6 +41,7 @@ describe("Utils library tests", function () {
   async function deployFixturePermit() {
     // Fixture with TestCurrency (without access control)
     const currency = await initCurrency(
+      ethers,
       {
         name: "Test USDC",
         symbol: "USDC",
@@ -64,8 +67,8 @@ describe("Utils library tests", function () {
       .withArgs(anon, getRole("MINTER_ROLE"));
     await expect(currency.connect(anon).mint(anon, _A(100))).to.be.revertedWithACError(currency, anon, "MINTER_ROLE");
 
-    await grantRole(hre, currency.connect(admin), "MINTER_ROLE", admin);
-    await expect(currency.connect(admin).mint(anon, _A(100))).not.to.be.reverted;
+    await grantRole(ethers, currency.connect(admin), "MINTER_ROLE", admin);
+    await currency.connect(admin).mint(anon, _A(100));
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
   });
 
@@ -74,9 +77,9 @@ describe("Utils library tests", function () {
 
     expect(await currency.balanceOf(anon)).to.equal(_A(10000));
 
-    await expect(currency.connect(admin).mint(anon, _A(100))).not.to.be.reverted;
+    await currency.connect(admin).mint(anon, _A(100));
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
-    await expect(currency.connect(admin).burn(anon, _A(150))).not.to.be.reverted;
+    await currency.connect(admin).burn(anon, _A(150));
     expect(await currency.balanceOf(anon)).to.equal(_A(9950));
   });
 
@@ -87,7 +90,7 @@ describe("Utils library tests", function () {
     expect(await currency.balanceOf(user2)).to.equal(_A(1000));
 
     const { sig, deadline } = await makeEIP2612Signature(
-      hre,
+      connection,
       currency,
       user1,
       await ethers.resolveAddress(user2),

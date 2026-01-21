@@ -1,19 +1,19 @@
 // In this module we include the utility functions that don't require hre global variable
-const { findAll } = require("solidity-ast/utils");
-const ethers = require("ethers");
-const withArgsInternal = require("@nomicfoundation/hardhat-chai-matchers/internal/withArgs");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { IMPLEMENTATION_SLOT, HOUR } = require("./constants");
+// import { findAll } from "solidity-ast/utils";
+import { ethers } from "ethers";
+import { anyUint, anyValue } from "@nomicfoundation/hardhat-ethers-chai-matchers/withArgs";
+import helpers from "@nomicfoundation/hardhat-network-helpers";
+import { IMPLEMENTATION_SLOT, HOUR } from "./constants.js";
 
-const _E = ethers.parseEther;
-const WAD = 10n ** 18n; // 1e18
-const RAY = 10n ** 27n; // 1e27
+export const _E = ethers.parseEther;
+export const WAD = 10n ** 18n; // 1e18
+export const RAY = 10n ** 27n; // 1e27
 
-function getAddress(addressable) {
+export function getAddress(addressable) {
   return addressable.address || addressable.target || addressable;
 }
 
-async function getStorageLayout(hre, contractSrc, contractName) {
+export async function getStorageLayout(hre, contractSrc, contractName) {
   const buildInfo = await hre.artifacts.getBuildInfo(`${contractSrc}:${contractName}`);
   if (buildInfo === undefined) throw new Error(`Contract ${contractSrc}:${contractName} not in artifacts`);
 
@@ -36,7 +36,7 @@ async function getStorageLayout(hre, contractSrc, contractName) {
  *
  *          Floats will be rounded to 6 decimal before scaling.
  */
-function amountFunction(decimals) {
+export function amountFunction(decimals) {
   return function (value) {
     if (value === undefined) return undefined;
 
@@ -53,18 +53,18 @@ function amountFunction(decimals) {
 }
 
 /** Wad function */
-const _W = amountFunction(18);
+export const _W = amountFunction(18);
 
 /** Ray function */
-const _R = amountFunction(27);
+export const _R = amountFunction(27);
 
 /** Amount function - For tokens with 6 decimals */
-const _A = amountFunction(6);
+export const _A = amountFunction(6);
 
 /**
  * Returns a role identifier by computing the keccak of the role name.
  */
-function getRole(role) {
+export function getRole(role) {
   if (role.startsWith("0x")) return role;
   return role === "DEFAULT_ADMIN_ROLE" ? ethers.ZeroHash : ethers.keccak256(ethers.toUtf8Bytes(role));
 }
@@ -81,7 +81,7 @@ function getRole(role) {
  *     getComponentRole("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d", "ORACLE_ADMIN_ROLE")
  *     // "0x05e01b185238b49f750d03d945e38a7f6c3be8b54de0ee42d481eb7814f0d3a8"
  */
-function getComponentRole(componentAddress, role) {
+export function getComponentRole(componentAddress, role) {
   if (!role.startsWith("0x")) role = getRole(role);
 
   // 32 byte array
@@ -101,7 +101,7 @@ function getComponentRole(componentAddress, role) {
  * To be used with Ensuro v2 AccessManager
  */
 // eslint-disable-next-line no-empty-function
-async function grantComponentRole(hre, contract, component, role, user, txOverrides = {}, log = () => {}) {
+export async function grantComponentRole(hre, contract, component, role, user, txOverrides = {}, log = () => {}) {
   let userAddress;
   if (user === undefined) {
     user = await getDefaultSigner(hre);
@@ -120,7 +120,7 @@ async function grantComponentRole(hre, contract, component, role, user, txOverri
   }
 }
 
-const AM_ROLES = {
+export const AM_ROLES = {
   ADMIN_ROLE: 0n,
   PUBLIC_ROLE: BigInt("0xffffffffffffffff"),
 };
@@ -128,7 +128,7 @@ const AM_ROLES = {
 /**
  * Returns an access manager role (64 bit) from a string, computing a hash and taking the last 16 bits
  */
-function getAccessManagerRole(roleName) {
+export function getAccessManagerRole(roleName) {
   let roleId = AM_ROLES[roleName];
   if (roleId !== undefined) return roleId;
   if (typeof roleName === "number" || typeof roleName === "bigint") return roleName;
@@ -137,8 +137,8 @@ function getAccessManagerRole(roleName) {
   return BigInt(`0x${ethers.keccak256(ethers.toUtf8Bytes(roleName)).slice(-16)}`);
 }
 
-async function getDefaultSigner(hre) {
-  const signers = await hre.ethers.getSigners();
+export async function getDefaultSigner(ethers) {
+  const signers = await ethers.getSigners();
   return signers[0];
 }
 
@@ -146,10 +146,10 @@ async function getDefaultSigner(hre) {
  * Grant a role to a user
  */
 // eslint-disable-next-line no-empty-function
-async function grantRole(hre, contract, role, user, txOverrides = {}, log = () => {}) {
+export async function grantRole(ethers, contract, role, user, txOverrides = {}, log = () => {}) {
   let userAddress;
   if (user === undefined) {
-    user = await getDefaultSigner(hre);
+    user = await getDefaultSigner(ethers);
     userAddress = user.address;
   } else {
     userAddress = user.address === undefined ? user : user.address;
@@ -165,21 +165,21 @@ async function grantRole(hre, contract, role, user, txOverrides = {}, log = () =
 
 /**
  * Finds an event in the receipt
- * @param {Interface} interface The interface of the contract that contains the requested event
+ * @param {Interface} contractInterface The interface of the contract that contains the requested event
  * @param {TransactionReceipt} receipt Transaction receipt containing the events in the logs
  * @param {String} eventName The name of the event we are interested in
  * @param {Boolean} firstOnly If false, returns all the events matching the name
  * @param {String} contractAddress If not null, if returns only those events generated by the specified contract
  * @returns {LogDescription}
  */
-function getTransactionEvent(interface, receipt, eventName, firstOnly = true, contractAddress = null) {
+export function getTransactionEvent(contractInterface, receipt, eventName, firstOnly = true, contractAddress = null) {
   const ret = [];
   // for each log in the transaction receipt
   for (const log of receipt.logs) {
     let parsedLog;
     if (contractAddress !== null && contractAddress !== log.address) continue;
     try {
-      parsedLog = interface.parseLog(log);
+      parsedLog = contractInterface.parseLog(log);
     } catch (error) {
       continue;
     }
@@ -194,7 +194,7 @@ function getTransactionEvent(interface, receipt, eventName, firstOnly = true, co
 /**
  * Builds AccessControl error message for comparison in tests
  */
-function accessControlMessage(user, component, role) {
+export function accessControlMessage(user, component, role) {
   const userAddr = getAddress(user);
   const compAddr = component !== null ? getAddress(component) : component;
   const roleHash = component !== null ? getComponentRole(compAddr, role) : getRole(role);
@@ -202,7 +202,7 @@ function accessControlMessage(user, component, role) {
   return `AccessControl: account ${userAddr.toLowerCase()} is missing role ${roleHash}`;
 }
 
-async function readImplementationAddress(hre, contractAddress) {
+export async function readImplementationAddress(hre, contractAddress) {
   const implStorage = await hre.ethers.provider.getStorage(contractAddress, IMPLEMENTATION_SLOT);
   return ethers.getAddress(ethers.dataSlice(implStorage, 12));
 }
@@ -212,7 +212,7 @@ async function readImplementationAddress(hre, contractAddress) {
  * @param {string} value
  * @returns {ethers.BigNumber}
  */
-function uintKeccak(value) {
+export function uintKeccak(value) {
   return BigInt(ethers.keccak256(ethers.toUtf8Bytes(value)));
 }
 
@@ -220,7 +220,7 @@ const tagRegExp = new RegExp("\\[(?<neg>[!])?(?<variant>[a-zA-Z0-9+]+)\\]", "gu"
 
 const tagConditionRegExp = new RegExp("\\[(?<neg>[!])?[?](?<boolAttr>[a-zA-Z0-9]+)\\]", "gu");
 
-function tagitVariant(variant, only, testDescription, test) {
+export function tagitVariant(variant, only, testDescription, test) {
   let any = false;
   const iit = only || variant.only ? it.only : it;
   for (const m of testDescription.matchAll(tagRegExp)) {
@@ -253,9 +253,9 @@ function tagitVariant(variant, only, testDescription, test) {
   if (!any) iit(testDescription, test);
 }
 
-const tagit = (testDescription, test, only = false) => tagitVariant(this, only, testDescription, test);
+export const tagit = (testDescription, test, only = false) => tagitVariant(this, only, testDescription, test);
 
-const tagitonly = (testDescription, test) => tagitVariant(this, true, testDescription, test);
+export const tagitonly = (testDescription, test) => tagitVariant(this, true, testDescription, test);
 
 /**
  * Makes all the view or pure functions publicly accessible in an access managed contract
@@ -263,7 +263,7 @@ const tagitonly = (testDescription, test) => tagitVariant(this, true, testDescri
  * @param {acMgr} The access manager contract
  * @param {contract} The called contract
  */
-async function makeAllViewsPublic(acMgr, contract) {
+export async function makeAllViewsPublic(acMgr, contract) {
   const PUBLIC_ROLE = await acMgr.PUBLIC_ROLE();
   const selectors = contract.interface.fragments
     .filter(
@@ -283,7 +283,7 @@ async function makeAllViewsPublic(acMgr, contract) {
  * @param {role} Name of the role (key in the `roles` dictionary and label)
  * @param {methods} list of methods to enable for this role
  */
-async function setupAMRole(acMgr, contract, roles, role, methods) {
+export async function setupAMRole(acMgr, contract, roles, role, methods) {
   const roleId = roles === undefined ? getAccessManagerRole(role) : roles[role];
   await acMgr.labelRole(roleId, role);
   const selectors = methods.map((method) =>
@@ -301,7 +301,7 @@ async function setupAMRole(acMgr, contract, roles, role, methods) {
  * @param {roleName} Name of the role, default=SUPERADMIN
  * @return The id of the created role (roleId)
  */
-async function setupAMSuperAdminRole(acMgr, contract, roleId = 1111, roleName = "SUPERADMIN") {
+export async function setupAMSuperAdminRole(acMgr, contract, roleId = 1111, roleName = "SUPERADMIN") {
   roleId = roleId === undefined ? getAccessManagerRole(roleName) : roleId;
   if (AM_ROLES[roleName] === undefined) {
     // Don't label PUBLIC_ROLE or ADMIN_ROLE
@@ -317,7 +317,7 @@ async function setupAMSuperAdminRole(acMgr, contract, roleId = 1111, roleName = 
   return roleId;
 }
 
-function mergeFragments(a, b) {
+export function mergeFragments(a, b) {
   const fallback = a.find((f) => f.type === "fallback");
   return a.concat(
     b.filter((fragment) => fragment.type !== "constructor" && (fallback === undefined || fragment.type !== "fallback"))
@@ -326,14 +326,14 @@ function mergeFragments(a, b) {
 
 // Alternative to anyValue and anyUint that captures the received value
 // Usefull when you have to do closeTo comparisons
-function newCaptureAny() {
+export function newCaptureAny() {
   const ret = { lastUint: undefined, lastValue: undefined };
   Reflect.defineProperty(ret, "uint", {
     enumeable: true,
     get: function () {
       return (i) => {
         this.lastUint = i;
-        return withArgsInternal.anyUint(i);
+        return anyUint(i);
       };
     },
   });
@@ -343,18 +343,18 @@ function newCaptureAny() {
     get: function () {
       return (i) => {
         this.lastValue = i;
-        return withArgsInternal.anyValue(i);
+        return anyValue();
       };
     },
   });
   return ret;
 }
 
-const captureAny = newCaptureAny();
+export const captureAny = newCaptureAny();
 
-async function makeEIP2612Signature(hre, token, owner, spenderAddress, value, deadline = HOUR) {
+export async function makeEIP2612Signature(connection, token, owner, spenderAddress, value, deadline = HOUR) {
   // From: https://www.quicknode.com/guides/ethereum-development/transactions/how-to-use-erc20-permit-approval
-  const chainId = hre.network.config.chainId;
+  const chainId = connection.networkConfig.chainId;
   // set the domain parameters
   const tokenAddr = await ethers.resolveAddress(token);
   const domain = {
@@ -392,7 +392,7 @@ async function makeEIP2612Signature(hre, token, owner, spenderAddress, value, de
 
   if (deadline < 1600000000) {
     // Is a duration in seconds
-    deadline = (await helpers.time.latest()) + deadline;
+    deadline = (await connection.networkHelpers.time.latest()) + deadline;
   }
 
   const nonces = await token.nonces(owner);
@@ -414,36 +414,3 @@ async function makeEIP2612Signature(hre, token, owner, spenderAddress, value, de
   const sig = ethers.Signature.from(signature);
   return { sig, deadline, nonces };
 }
-
-module.exports = {
-  _E,
-  _A,
-  _R,
-  _W,
-  accessControlMessage,
-  amountFunction,
-  getAddress,
-  getDefaultSigner,
-  getRole,
-  getComponentRole,
-  getAccessManagerRole,
-  getStorageLayout,
-  getTransactionEvent,
-  grantRole,
-  grantComponentRole,
-  RAY,
-  readImplementationAddress,
-  uintKeccak,
-  WAD,
-  tagit,
-  tagitonly,
-  tagitVariant,
-  makeAllViewsPublic,
-  mergeFragments,
-  setupAMRole,
-  setupAMSuperAdminRole,
-  captureAny,
-  newCaptureAny,
-  AM_ROLES,
-  makeEIP2612Signature,
-};

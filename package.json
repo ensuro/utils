@@ -2,6 +2,7 @@
   "name": "@ensuro/utils",
   "description": "Javascript library with different utils for tests and dealing with smart contracts",
   "version": "%%VERSION%%",
+  "type": "module",
   "files": [
     "**/*.sol",
     "/build",
@@ -13,24 +14,19 @@
     "test": "hardhat test"
   },
   "devDependencies": {
-    "chai": "^4.5.0",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.2",
+    "@solidstate/hardhat-contract-sizer": "^3.0.0",
     "dotenv": "^16.5.0",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
-    "hardhat-contract-sizer": "^2.10.0",
-    "hardhat-dependency-compiler": "^1.2.1",
+    "hardhat": "^3.1.5",
     "prettier": "^3.5.3",
     "solhint": "^5.0.5",
     "solhint-plugin-prettier": "^0.1.0",
-    "solidity-ast": "^0.4.60"
+    "solidity-ast": "^0.4.61"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.3.0"
-  },
-  "peerDependencies": {
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.23.0"
   },
   "repository": {
     "type": "git",
