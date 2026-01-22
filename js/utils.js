@@ -202,8 +202,8 @@ export function accessControlMessage(user, component, role) {
   return `AccessControl: account ${userAddr.toLowerCase()} is missing role ${roleHash}`;
 }
 
-export async function readImplementationAddress(hre, contractAddress) {
-  const implStorage = await hre.ethers.provider.getStorage(contractAddress, IMPLEMENTATION_SLOT);
+export async function readImplementationAddress(ethers, contractAddress) {
+  const implStorage = await ethers.provider.getStorage(contractAddress, IMPLEMENTATION_SLOT);
   return ethers.getAddress(ethers.dataSlice(implStorage, 12));
 }
 

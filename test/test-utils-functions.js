@@ -1,17 +1,22 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { _A, getRole, grantRole, makeEIP2612Signature } from "../js/utils.js";
-import { initCurrency } from "../js/test-utils.js";
+import { _A, getRole, grantRole, makeEIP2612Signature, readImplementationAddress } from "../js/utils.js";
+import { initCurrency, deployProxy } from "../js/test-utils.js";
 
 const connection = await hre.network.connect();
 const { networkHelpers: helpers, ethers } = connection;
 const { MaxUint256 } = ethers;
 
 describe("Utils library tests", function () {
-  let admin, anon, user1, user2;
+  let deployer, admin, anon, user1, user2;
+  let initialState;
+
+  before(async () => {
+    initialState = await helpers.takeSnapshot();
+  });
 
   beforeEach(async () => {
-    [, anon, admin, user1, user2] = await ethers.getSigners();
+    [deployer, anon, admin, user1, user2] = await ethers.getSigners();
   });
 
   async function deployACFixture() {
@@ -178,5 +183,25 @@ describe("Utils library tests", function () {
       await vault.setOverride(method.option, await vault.OVERRIDE_UNSET());
       expect(await vault[`max${method.name}`](anon)).to.equal(method.initial);
     }
+  });
+
+  it("Can deploy a proxy contract and obtain the implementation address for it", async () => {
+    await initialState.restore(); // reset state to force deterministic addresses
+
+    expect(deployer.address).to.equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"); // sanity check for deterministic address below
+    expect(await deployer.getNonce()).to.equal(0);
+
+    const ProxyFactory = await ethers.getContractFactory("ERC1967Proxy");
+    const ImplementationFactory = await ethers.getContractFactory("UpgradeableMock");
+    const contract = await deployProxy(ethers, ProxyFactory, ImplementationFactory, [], [admin.address]);
+    expect(await deployer.getNonce()).to.equal(2); // sanity check for deterministic address below
+
+    expect(await contract.getValue()).to.equal(0);
+    await contract.setValue(42);
+    expect(await contract.getValue()).to.equal(42);
+
+    expect(await deployer.getNonce()).to.equal(3);
+    const implAddress = await readImplementationAddress(ethers, contract);
+    expect(implAddress).to.equal("0x5FbDB2315678afecb367f032d93F642f64180aa3");
   });
 });
