@@ -1,5 +1,5 @@
 // In this module we include the utility functions that don't require hre global variable
-// import { findAll } from "solidity-ast/utils";
+import { findAll } from "./solidity-ast-shim.js";
 import { ethers } from "ethers";
 import { anyUint, anyValue } from "@nomicfoundation/hardhat-ethers-chai-matchers/withArgs";
 import helpers from "@nomicfoundation/hardhat-network-helpers";
