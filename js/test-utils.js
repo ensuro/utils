@@ -47,24 +47,22 @@ export async function initForkCurrency(connection, currencyAddress, currencyOrig
 }
 
 /**
- * Resets hardhat network to fork on the specified block and url
+ * Returns a new connection forking from a live chain at the specified block and url
  */
-export async function setupChain(provider, block, alchemyUrlEnv = "ALCHEMY_URL") {
+export async function setupChain(block, alchemyUrlEnv = "ALCHEMY_URL") {
   const alchemyUrl = process.env[alchemyUrlEnv];
   if (alchemyUrl === undefined) throw new Error(`Define envvar ${alchemyUrlEnv} for this test`);
 
   if (block === undefined) throw new Error("Block can't be undefined use null for the current block");
   if (block === null) block = undefined;
-  return provider.request({
-    method: "hardhat_reset",
-    params: [
-      {
-        forking: {
-          jsonRpcUrl: alchemyUrl,
-          blockNumber: block,
-        },
+
+  return hre.network.connect({
+    override: {
+      forking: {
+        url: alchemyUrl,
+        blockNumber: block,
       },
-    ],
+    },
   });
 }
 
