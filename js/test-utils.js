@@ -1,8 +1,7 @@
 import { expect } from "chai";
 import hre from "hardhat";
 import { anyValue } from "@nomicfoundation/hardhat-ethers-chai-matchers/withArgs";
-import { getRole, captureAny, getTransactionEvent, getAddress } from "./utils.js";
-import { Assertion } from "chai";
+import { captureAny, getTransactionEvent, getAddress } from "./utils.js";
 
 export async function initCurrency(ethers, options, initial_targets, initial_balances) {
   const extraArgs = options.extraArgs || [];
@@ -75,12 +74,12 @@ export const skipForkTests = process.env.SKIP_FORK_TESTS === "true";
  * block number to the test name.
  */
 export const fork = {
-  it: (name, provider, blockNumber, test, alchemyUrlEnv = "ALCHEMY_URL") => {
+  it: (name, blockNumber, test, alchemyUrlEnv = "ALCHEMY_URL") => {
     const fullName = `[FORK ${blockNumber}] ${name}`;
 
     // eslint-disable-next-line func-style
     const wrapped = async (...args) => {
-      await setupChain(provider, blockNumber, alchemyUrlEnv);
+      await setupChain(blockNumber, alchemyUrlEnv);
 
       return test(...args);
     };
@@ -90,18 +89,6 @@ export const fork = {
 };
 
 if (process.env.ENABLE_HH_WARNINGS !== "yes" && hre.upgrades !== undefined) hre.upgrades.silenceWarnings();
-
-// Install chai matcher
-Assertion.addMethod("revertedWithACError", function (contract, user, role) {
-  return new Assertion(this._obj).to.be
-    .revertedWithCustomError(contract, "AccessControlUnauthorizedAccount")
-    .withArgs(user, getRole(role));
-});
-
-// Install chai matchear for AccessManagedError
-Assertion.addMethod("revertedWithAMError", function (contract, user) {
-  return new Assertion(this._obj).to.be.revertedWithCustomError(contract, "AccessManagedUnauthorized").withArgs(user);
-});
 
 /**
  * Function to deploy a proxy and implementation, similar to hre.upgrades.deployProxy, but without using OZ upgrades
