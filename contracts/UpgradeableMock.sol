@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract UpgradeableMock is Initializable, UUPSUpgradeable, OwnableUpgradeable {
   uint256 private value;
@@ -27,5 +27,6 @@ contract UpgradeableMock is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     return value;
   }
 
+  // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
