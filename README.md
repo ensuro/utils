@@ -85,6 +85,7 @@ Other stuff to look out for:
 
 1. The solidity build now generates several build-info file. Adapt build scripts to only take the `.json` one (exclude the `.output.json` one).
 2. `npx hardhat size-contracts` is now `npx hardhat contract-size list`
+3. `npx hardhat coverage` is now `npx hardhat test --coverage`
 
 ## Hardhat-Retry
 
