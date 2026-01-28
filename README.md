@@ -88,7 +88,7 @@ Other stuff to look out for:
 
 ## Hardhat-Retry
 
-TODO: adapt this to hardhat3
+TODO: this plugins needs to be implemented as a proper hardhat plugin on hardhat 3.
 
 We include hardhat-retry to enhance the stability of tests in the projects using Hardhat. It automatically retries due to network issues like:
 
@@ -96,24 +96,18 @@ We include hardhat-retry to enhance the stability of tests in the projects using
 - -32000: execution aborted (timeout = 10s). This occurs when a network request timeout or node delays.
 - Gas related errors. This occurs during retries so we set initialBaseFeePerGas to 0 so we mitigate it.
 
-### hardhat.config.js
+### hardhat.config.ts
 
 To use hardhat-retry add the following to your Hardhat configuration file:
 
 ```js
-const hretry = require("@ensuro/utils/js/hardhat-retry");
+import hardhatRetryPlugin from "@ensuro/utils/plugins/retry/index.js";
 
-hretry.installWrapper();
-```
 
-To enable hardhat-retry works correctly you must configure the hardhat network settings. Add this network config to hardha.config.js:
-
-```js
-networks: {
-    hardhat: {
-      initialBaseFeePerGas: 0,
-    },
-  },
+export default defineConfig({
+  plugins: [hardhatRetryPlugin],
+  ...
+})
 ```
 
 ## Verifiable binaries

@@ -1,16 +1,14 @@
-const fs = require("fs");
-const path = require("path");
-const glob = require("glob");
-const { execSync } = require("child_process");
-const { ethers } = require("ethers");
-const { HardhatPluginError } = require("hardhat/plugins");
-const { Etherscan } = require("@nomicfoundation/hardhat-verify/internal/etherscan");
-const {
-  ContractAlreadyVerifiedError,
-  VerificationAPIUnexpectedMessageError,
-} = require("@nomicfoundation/hardhat-verify/internal/errors");
-const { encodeArguments, sleep } = require("@nomicfoundation/hardhat-verify/internal/utilities");
-const { extendEnvironment, task, types } = require("hardhat/config");
+import fs from "fs";
+import path from "path";
+import glob from "glob";
+import { execSync } from "child_process";
+import { ethers } from "ethers";
+import { HardhatPluginError } from "hardhat/plugins";
+// import { Etherscan } from "@nomicfoundation/hardhat-verify/internal/etherscan";
+// import {ContractAlreadyVerifiedError, VerificationAPIUnexpectedMessageError} from "@nomicfoundation/hardhat-verify/internal/errors";
+
+// import {encodeArguments, sleep} from "@nomicfoundation/hardhat-verify/internal/utilities";
+// import {extendEnvironment, task, types} from "hardhat/config";
 
 let artifactCache;
 
