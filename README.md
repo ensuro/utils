@@ -69,6 +69,7 @@ const { networkHelpers: helpers, ethers } = connection;
 ```
 
 - Pass `ethers` as the first argument to all calls to `initCurrency`, `deployProxy` and `readImplementationAddress`. It must be the one from the connection, don't import ethersjs directly.
+- `to.be.reverted` matcher is now `to.revert(ethers)`. Other matchers also expect to receive the `ethers` object as first argument too.
 - Pass the connection as the first argument to all calls to `initForkCurrency`
 - Pass the networkHelpers as the first argument to all calls to `amScheduleAndExecute` and `amScheduleAndExecuteBatch`.
 - The function `setupChain` now creates a new connection forking at the given block/url and returns it
