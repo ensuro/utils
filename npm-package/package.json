@@ -2,11 +2,16 @@
   "name": "@ensuro/utils",
   "description": "Javascript library with different utils for tests and dealing with smart contracts",
   "version": "%%VERSION%%",
+  "type": "module",
   "files": [
     "**/*.sol",
     "/build",
     "/js/*.js"
   ],
+  "peerDependencies": {
+    "hardhat": "^3.1.5",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.2"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ensuro/utils.git"

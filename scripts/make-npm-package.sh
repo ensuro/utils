@@ -33,7 +33,8 @@ cp -r artifacts/contracts $TARGET_DIR/build
 # Include also @openzeppelin build, so it can be used as verifiable binary
 cp -r artifacts/@openzeppelin $TARGET_DIR/build
 
-cp artifacts/build-info/*.json $TARGET_DIR/build/build-info.json
+BUILD_INFO_JSON=$(find artifacts/build-info -maxdepth 1 -type f -name '*.json' ! -name '*.output.json' -print -quit)
+cp "$BUILD_INFO_JSON" "$TARGET_DIR/build/build-info.json"
 
 find $TARGET_DIR -name "*.dbg.json" -delete
 sed "s/%%VERSION%%/$VERSION/" npm-package/package.json > "$TARGET_DIR/package.json"

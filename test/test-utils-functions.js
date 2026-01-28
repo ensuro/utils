@@ -1,22 +1,28 @@
-const hre = require("hardhat");
-const { expect } = require("chai");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { _A, getRole, grantRole, makeEIP2612Signature } = require("../js/utils");
-const { initCurrency } = require("../js/test-utils");
+import hre from "hardhat";
+import { expect } from "chai";
+import { _A, getRole, grantRole, makeEIP2612Signature, readImplementationAddress } from "../js/utils.js";
+import { initCurrency, deployProxy } from "../js/test-utils.js";
 
-const { ethers } = hre;
+const connection = await hre.network.connect();
+const { networkHelpers: helpers, ethers } = connection;
 const { MaxUint256 } = ethers;
 
 describe("Utils library tests", function () {
-  let admin, anon, user1, user2;
+  let deployer, admin, anon, user1, user2;
+  let initialState;
+
+  before(async () => {
+    initialState = await helpers.takeSnapshot();
+  });
 
   beforeEach(async () => {
-    [, anon, admin, user1, user2] = await ethers.getSigners();
+    [deployer, anon, admin, user1, user2] = await ethers.getSigners();
   });
 
   async function deployACFixture() {
     // Fixture with TestCurrencyAC (with access control)
     const currency = await initCurrency(
+      ethers,
       { name: "Test USDC", symbol: "USDC", decimals: 6, initial_supply: _A(50000), extraArgs: [admin] },
       [anon, user1, user2, admin],
       [_A("10000"), _A("2000"), _A("1000"), _A("20000")]
@@ -28,6 +34,7 @@ describe("Utils library tests", function () {
   async function deployFixture() {
     // Fixture with TestCurrency (without access control)
     const currency = await initCurrency(
+      ethers,
       { name: "Test USDC", symbol: "USDC", decimals: 6, initial_supply: _A(50000) },
       [anon, user1, user2, admin],
       [_A("10000"), _A("2000"), _A("1000"), _A("20000")]
@@ -39,6 +46,7 @@ describe("Utils library tests", function () {
   async function deployFixturePermit() {
     // Fixture with TestCurrency (without access control)
     const currency = await initCurrency(
+      ethers,
       {
         name: "Test USDC",
         symbol: "USDC",
@@ -64,8 +72,8 @@ describe("Utils library tests", function () {
       .withArgs(anon, getRole("MINTER_ROLE"));
     await expect(currency.connect(anon).mint(anon, _A(100))).to.be.revertedWithACError(currency, anon, "MINTER_ROLE");
 
-    await grantRole(hre, currency.connect(admin), "MINTER_ROLE", admin);
-    await expect(currency.connect(admin).mint(anon, _A(100))).not.to.be.reverted;
+    await grantRole(ethers, currency.connect(admin), "MINTER_ROLE", admin);
+    await currency.connect(admin).mint(anon, _A(100));
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
   });
 
@@ -74,9 +82,9 @@ describe("Utils library tests", function () {
 
     expect(await currency.balanceOf(anon)).to.equal(_A(10000));
 
-    await expect(currency.connect(admin).mint(anon, _A(100))).not.to.be.reverted;
+    await currency.connect(admin).mint(anon, _A(100));
     expect(await currency.balanceOf(anon)).to.equal(_A(10100));
-    await expect(currency.connect(admin).burn(anon, _A(150))).not.to.be.reverted;
+    await currency.connect(admin).burn(anon, _A(150));
     expect(await currency.balanceOf(anon)).to.equal(_A(9950));
   });
 
@@ -87,7 +95,7 @@ describe("Utils library tests", function () {
     expect(await currency.balanceOf(user2)).to.equal(_A(1000));
 
     const { sig, deadline } = await makeEIP2612Signature(
-      hre,
+      connection,
       currency,
       user1,
       await ethers.resolveAddress(user2),
@@ -175,5 +183,25 @@ describe("Utils library tests", function () {
       await vault.setOverride(method.option, await vault.OVERRIDE_UNSET());
       expect(await vault[`max${method.name}`](anon)).to.equal(method.initial);
     }
+  });
+
+  it("Can deploy a proxy contract and obtain the implementation address for it", async () => {
+    await initialState.restore(); // reset state to force deterministic addresses
+
+    expect(deployer.address).to.equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"); // sanity check for deterministic address below
+    expect(await deployer.getNonce()).to.equal(0);
+
+    const ProxyFactory = await ethers.getContractFactory("ERC1967Proxy");
+    const ImplementationFactory = await ethers.getContractFactory("UpgradeableMock");
+    const contract = await deployProxy(ethers, ProxyFactory, ImplementationFactory, [], [admin.address]);
+    expect(await deployer.getNonce()).to.equal(2); // sanity check for deterministic address below
+
+    expect(await contract.getValue()).to.equal(0);
+    await contract.setValue(42);
+    expect(await contract.getValue()).to.equal(42);
+
+    expect(await deployer.getNonce()).to.equal(3);
+    const implAddress = await readImplementationAddress(ethers, contract);
+    expect(implAddress).to.equal("0x5FbDB2315678afecb367f032d93F642f64180aa3");
   });
 });

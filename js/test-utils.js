@@ -1,13 +1,9 @@
-const { expect } = require("chai");
-const hre = require("hardhat");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const withArgs = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-const { getRole, captureAny, getTransactionEvent, getAddress } = require("./utils");
-const { Assertion } = require("chai");
+import { expect } from "chai";
+import hre from "hardhat";
+import { anyValue } from "@nomicfoundation/hardhat-ethers-chai-matchers/withArgs";
+import { captureAny, getTransactionEvent, getAddress } from "./utils.js";
 
-const { ethers } = hre;
-
-async function initCurrency(options, initial_targets, initial_balances) {
+export async function initCurrency(ethers, options, initial_targets, initial_balances) {
   const extraArgs = options.extraArgs || [];
   const Currency = await ethers.getContractFactory(
     options.contractClass || (extraArgs.length == 0 ? "TestCurrency" : "TestCurrencyAC")
@@ -35,7 +31,8 @@ async function initCurrency(options, initial_targets, initial_balances) {
  * @param initialTargets Array of addresses that will receive the initial balances
  * @param initialBalances Initial balances for each address
  */
-async function initForkCurrency(currencyAddress, currencyOrigin, initialTargets, initialBalances) {
+export async function initForkCurrency(connection, currencyAddress, currencyOrigin, initialTargets, initialBalances) {
+  const { ethers, networkHelpers: helpers } = connection;
   const currency = await ethers.getContractAt("IERC20", currencyAddress);
   await helpers.impersonateAccount(currencyOrigin);
   await helpers.setBalance(currencyOrigin, ethers.parseEther("100"));
@@ -49,28 +46,26 @@ async function initForkCurrency(currencyAddress, currencyOrigin, initialTargets,
 }
 
 /**
- * Resets hardhat network to fork on the specified block and url
+ * Returns a new connection forking from a live chain at the specified block and url
  */
-async function setupChain(block, alchemyUrlEnv = "ALCHEMY_URL") {
+export async function setupChain(block, alchemyUrlEnv = "ALCHEMY_URL") {
   const alchemyUrl = process.env[alchemyUrlEnv];
   if (alchemyUrl === undefined) throw new Error(`Define envvar ${alchemyUrlEnv} for this test`);
 
   if (block === undefined) throw new Error("Block can't be undefined use null for the current block");
   if (block === null) block = undefined;
-  return hre.network.provider.request({
-    method: "hardhat_reset",
-    params: [
-      {
-        forking: {
-          jsonRpcUrl: alchemyUrl,
-          blockNumber: block,
-        },
+
+  return hre.network.connect({
+    override: {
+      forking: {
+        url: alchemyUrl,
+        blockNumber: block,
       },
-    ],
+    },
   });
 }
 
-const skipForkTests = process.env.SKIP_FORK_TESTS === "true";
+export const skipForkTests = process.env.SKIP_FORK_TESTS === "true";
 
 /**
  * Chai test case wrapper for tests that require forking a live chain.
@@ -78,7 +73,7 @@ const skipForkTests = process.env.SKIP_FORK_TESTS === "true";
  * It validates that the chain node URL is set, forks the chain at the specified block and adds the
  * block number to the test name.
  */
-const fork = {
+export const fork = {
   it: (name, blockNumber, test, alchemyUrlEnv = "ALCHEMY_URL") => {
     const fullName = `[FORK ${blockNumber}] ${name}`;
 
@@ -95,23 +90,11 @@ const fork = {
 
 if (process.env.ENABLE_HH_WARNINGS !== "yes" && hre.upgrades !== undefined) hre.upgrades.silenceWarnings();
 
-// Install chai matcher
-Assertion.addMethod("revertedWithACError", function (contract, user, role) {
-  return new Assertion(this._obj).to.be
-    .revertedWithCustomError(contract, "AccessControlUnauthorizedAccount")
-    .withArgs(user, getRole(role));
-});
-
-// Install chai matchear for AccessManagedError
-Assertion.addMethod("revertedWithAMError", function (contract, user) {
-  return new Assertion(this._obj).to.be.revertedWithCustomError(contract, "AccessManagedUnauthorized").withArgs(user);
-});
-
 /**
  * Function to deploy a proxy and implementation, similar to hre.upgrades.deployProxy, but without using OZ upgrades
  * library that does a lot of validations that don't work with binary contracts.
  */
-async function deployProxy(proxyFactory, implFactory, constructorArgs, initializeArgs, extraProxyArgs) {
+export async function deployProxy(ethers, proxyFactory, implFactory, constructorArgs, initializeArgs, extraProxyArgs) {
   const impl = await implFactory.deploy(...(constructorArgs || []));
   const initializeData = impl.interface.encodeFunctionData("initialize", initializeArgs || []);
   const proxy = await proxyFactory.deploy(impl, initializeData, ...(extraProxyArgs || []));
@@ -121,16 +104,16 @@ async function deployProxy(proxyFactory, implFactory, constructorArgs, initializ
   return ret;
 }
 
-async function amScheduleAndExecute(accessManager, target, callData) {
+export async function amScheduleAndExecute(helpers, accessManager, target, callData) {
   await expect(accessManager.schedule(target, callData, 0))
     .to.emit(accessManager, "OperationScheduled")
-    .withArgs(withArgs.anyValue, withArgs.anyValue, captureAny.uint, withArgs.anyValue, target, withArgs.anyValue);
+    .withArgs(anyValue, anyValue, captureAny.uint, anyValue, target, anyValue);
   const when = captureAny.lastUint;
   await helpers.time.increaseTo(when);
   return accessManager.execute(target, callData);
 }
 
-async function amScheduleAndExecuteBatch(accessManager, targets, callDatas) {
+export async function amScheduleAndExecuteBatch(helpers, accessManager, targets, callDatas) {
   const scheduleCalls = targets.map((target, index) =>
     accessManager.interface.encodeFunctionData("schedule", [getAddress(target), callDatas[index], 0])
   );
@@ -152,14 +135,3 @@ async function amScheduleAndExecuteBatch(accessManager, targets, callDatas) {
   await helpers.time.increaseTo(maxWhen);
   return accessManager.multicall(executeCalls);
 }
-
-module.exports = {
-  fork,
-  initCurrency,
-  initForkCurrency,
-  setupChain,
-  skipForkTests,
-  deployProxy,
-  amScheduleAndExecute,
-  amScheduleAndExecuteBatch,
-};
