@@ -48,9 +48,9 @@ export async function initForkCurrency(connection, currencyAddress, currencyOrig
 /**
  * Returns a new connection forking from a live chain at the specified block and url
  */
-export async function setupChain(block, alchemyUrlEnv = "ALCHEMY_URL") {
-  const alchemyUrl = process.env[alchemyUrlEnv];
-  if (alchemyUrl === undefined) throw new Error(`Define envvar ${alchemyUrlEnv} for this test`);
+export async function setupChain(block) {
+  const rpcUrl = process.env.NODE_URL || process.env.ALCHEMY_URL;
+  if (rpcUrl === undefined) throw new Error(`Define envvar NODE_URL for this test`);
 
   if (block === undefined) throw new Error("Block can't be undefined use null for the current block");
   if (block === null) block = undefined;
@@ -58,7 +58,7 @@ export async function setupChain(block, alchemyUrlEnv = "ALCHEMY_URL") {
   return hre.network.connect({
     override: {
       forking: {
-        url: alchemyUrl,
+        url: rpcUrl,
         blockNumber: block,
       },
     },
@@ -74,12 +74,12 @@ export const skipForkTests = process.env.SKIP_FORK_TESTS === "true";
  * block number to the test name.
  */
 export const fork = {
-  it: (name, blockNumber, test, alchemyUrlEnv = "ALCHEMY_URL") => {
+  it: (name, blockNumber, test) => {
     const fullName = `[FORK ${blockNumber}] ${name}`;
 
     // eslint-disable-next-line func-style
     const wrapped = async (...args) => {
-      await setupChain(blockNumber, alchemyUrlEnv);
+      await setupChain(blockNumber);
 
       return test(...args);
     };
